@@ -8,8 +8,8 @@ class TestValidator(TestCase):
         test_cases = [
             ("John", True),  # Корректное имя
             ("John Doe", True),  # Корректное имя с пробелом
-            ("John123", False),  # Не корректное имя с цифрами
-            ("John-Doe", False)  # Не корректное имя с дефисом
+            ("John123", False),  # Некорректное имя с цифрами
+            ("John-Doe", False)  # Некорректное имя с дефисом
         ]
         for name, expected_result in test_cases:
             with self.subTest(name=name):
@@ -19,8 +19,8 @@ class TestValidator(TestCase):
         test_cases = [
             ("Doe", True),  # Корректная фамилия
             ("John Doe", True),  # Корректная фамилия с пробелом
-            ("Doe123", False),  # Не корректная фамилия с цифрами
-            ("Doe_White", False)  # Не корректная фамилия с подчеркиванием
+            ("Doe123", False),  # Некорректная фамилия с цифрами
+            ("Doe_White", False)  # Некорректная фамилия с подчеркиванием
         ]
         for surname, expected_result in test_cases:
             with self.subTest(surname=surname):
@@ -30,9 +30,9 @@ class TestValidator(TestCase):
         test_cases = [
             ("+12345678901", True),  # Корректный номер телефона с плюсом
             ("12345678901", True),  # Корректный номер телефона без плюса
-            ("+1234567890", False),  # Не корректный номер телефона без одной цифры
-            ("+123456789012", False),  # Не корректный номер телефона с плюсом и лишней цифрой
-            ("ABC4567890", False)  # Не корректный номер телефона с буквами
+            ("+1234567890", False),  # Некорректный номер телефона без одной цифры
+            ("+123456789012", False),  # Некорректный номер телефона с плюсом и лишней цифрой
+            ("ABC4567890", False)  # Некорректный номер телефона с буквами
         ]
         for phone, expected_result in test_cases:
             with self.subTest(phone=phone):

@@ -13,7 +13,7 @@ class Validator(object):
             name: имя пользователя.
 
         Return:
-            True - имя корректно, False - не корректна.
+            True - имя корректно, False - некорректна.
         """
         return bool(re.match(r'^[a-zA-Zа-яА-я\s]+$', name))
 
@@ -26,7 +26,7 @@ class Validator(object):
             surname: фамилия пользователя.
 
         Return:
-            True - фамилия корректно, False - не корректна.
+            True - фамилия корректно, False - некорректна.
         """
         return bool(re.match(r'^[a-zA-Zа-яА-я\s]+$', surname))
 
@@ -39,6 +39,30 @@ class Validator(object):
             phone: фамилия номера телефона пользователя.
 
         Return:
-            True - номера корректен, False - не корректен.
+            True - номера корректен, False - некорректен.
         """
         return bool(re.match(r'^(\+?\d{11}|\d{10})$', phone))
+
+    @staticmethod
+    def validate_date(date_str: str) -> bool:
+        """Валидация даты в формате YYYY-MM-DD.
+
+        Args:
+            date_str: строка с датой в формате YYYY-MM-DD.
+
+        Return:
+            True - дата корректна, False - некорректна.
+        """
+        return bool(re.match(r'\d{4}-\d{2}-\d{2}', date_str))
+
+    @staticmethod
+    def validate_time(time_str: str) -> bool:
+        """Валидация формата времени.
+
+        Args:
+            time_str: строка с временем.
+
+        Return:
+            True - формат времени корректен, False - некорректен.
+        """
+        return bool(re.match(r'^\d{2}:\d{2}$', time_str))
