@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
-from typing import Optional, Union
+from typing import Optional, Union, Any
 
 import datetime as datetime
 from aiogram import Bot, Dispatcher, types
 from aiogram import executor
 from asgiref.sync import sync_to_async
+from asyncio import sleep
 
 from app.bots.lib.common import EnumBase
 from app.bots.tail_trust.validator import Validator
@@ -47,6 +48,7 @@ class TextInterfaceBot(EnumBase):
     USER_APPOINTMENT_PET = 'Выберите категорию питомца:'
     USER_APPOINTMENT_COMPLETED = 'Регистрация на запись завершена! Проверить все записи можно введя /applist'
     USER_APPOINTMENT_INFO_ALL = 'Ваши записи на прием:\n'
+    USER_APPOINTMENT_INFO_NOTIFY = 'У Вас назначена запись:\n'
     USER_APPOINTMENT_INFO_LIST = 'Дата: {date}, время {time}, тип питомца {pet}'
 
     NO_USER_ID_ERROR = ('Не найдена запись о пользователе в базе данных.\n'
@@ -134,6 +136,8 @@ class TailTrustBot(BotBase):
 
         self.dp.register_message_handler(self.messages_handler)
 
+        self.bot.loop.create_task(self.schedule_task())
+
     async def messages_handler(self, message):
         personal_chat_id = message.chat.id
 
@@ -142,10 +146,25 @@ class TailTrustBot(BotBase):
             await self.process_registration(message)
             return
 
-        app_data = await self._get_user_appointments_data(personal_chat_id, get_last_appointment=True)
+        app_data = await self._get_user_appointments_data(
+            data_filter={'client_id': personal_chat_id}, get_last_appointment=True)
         if not app_data or not app_data.date or not app_data.time or not app_data.pet_type:
             await self.process_register_appointment(message)
             return
+
+    async def schedule_task(self):
+        while True:
+            await sleep(24 * 60 * 60)  # 24 часа в секундах
+            tomorrow_date = (datetime.datetime.now() + datetime.timedelta(days=1)).date()
+            appointments = await self._get_user_appointments_data(data_filter={'date': tomorrow_date})
+
+            for app in appointments:
+                personal_chat_id = int(app.client_id)
+                appointment_text = (TextInterfaceBot.USER_APPOINTMENT_INFO_NOTIFY +
+                                    TextInterfaceBot.USER_APPOINTMENT_INFO_LIST.format(
+                                        date=app.date, time=app.time, pet=app.pet_type)
+                                    )
+                await self.bot.send_message(personal_chat_id, appointment_text)
 
     async def cmd_reset(self, message: types.Message):
         personal_chat_id = message.chat.id
@@ -257,25 +276,31 @@ class TailTrustBot(BotBase):
         return self._generate_slots_keyboard(available_times)
 
     @staticmethod
+    def get_last_appointment(appointments: list[Appointment], get_last_appointment: bool = False):
+        sorted_appointments = sorted(appointments, key=lambda x: x.id, reverse=True)
+        if sorted_appointments:
+            if get_last_appointment:
+                return sorted_appointments[0]
+            return sorted_appointments
+
     async def _get_user_appointments_data(
-            personal_chat_id: int,
+            self,
+            data_filter: dict[str, Any],
             get_last_appointment: bool = False
     ) -> Optional[Union[Appointment, list[Appointment]]]:
         try:
-            appointments = await sync_to_async(list)(Appointment.objects.filter(client_id=personal_chat_id))
-            sorted_appointments = sorted(appointments, key=lambda x: x.id, reverse=True)
-            if sorted_appointments:
-                if get_last_appointment:
-                    return sorted_appointments[0]
-                return sorted_appointments
-            return None
+            appointments = await sync_to_async(list)(Appointment.objects.filter(**data_filter))
+            if 'client_id' in data_filter.keys():
+                return self.get_last_appointment(appointments, get_last_appointment)
+            return appointments
         except Appointment.DoesNotExist:
             return None
 
     async def process_register_appointment(self, message):
         personal_chat_id = message.chat.id
 
-        user_appointment_data = await self._get_user_appointments_data(personal_chat_id, get_last_appointment=True)
+        user_appointment_data = await self._get_user_appointments_data(
+            data_filter={'client_id': personal_chat_id}, get_last_appointment=True)
         if not user_appointment_data:
             await message.answer(TextInterfaceBot.NO_APPOINTMENT_ID_ERROR)
             return
@@ -309,7 +334,7 @@ class TailTrustBot(BotBase):
             await message.answer(TextInterfaceBot.NO_REGISTERED_MSG)
             return
 
-        appointments = await self._get_user_appointments_data(personal_chat_id)
+        appointments = await self._get_user_appointments_data(data_filter={'client_id': personal_chat_id})
         if not appointments:
             await message.answer(TextInterfaceBot.NO_APPOINTMENTS_ERROR)
             return
