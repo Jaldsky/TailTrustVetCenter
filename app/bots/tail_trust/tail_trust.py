@@ -140,8 +140,12 @@ class TailTrustBot(BotBase):
         user_data = await self._get_user_data(personal_chat_id)
         if not user_data or not user_data.name or not user_data.surname or not user_data.phone:
             await self.process_registration(message)
+            return
 
-        await self.process_register_appointment(message)
+        app_data = await self._get_user_appointments_data(personal_chat_id, get_last_appointment=True)
+        if not app_data or not app_data.date or not app_data.time or not app_data.pet_type:
+            await self.process_register_appointment(message)
+            return
 
     async def cmd_reset(self, message: types.Message):
         personal_chat_id = message.chat.id
@@ -253,8 +257,10 @@ class TailTrustBot(BotBase):
         return self._generate_slots_keyboard(available_times)
 
     @staticmethod
-    async def _get_user_appointments_data(personal_chat_id: int,
-                                          get_last_appointment: bool = False) -> Optional[Union[Client, list[Client]]]:
+    async def _get_user_appointments_data(
+            personal_chat_id: int,
+            get_last_appointment: bool = False
+    ) -> Optional[Union[Appointment, list[Appointment]]]:
         try:
             appointments = await sync_to_async(list)(Appointment.objects.filter(client_id=personal_chat_id))
             sorted_appointments = sorted(appointments, key=lambda x: x.id, reverse=True)
