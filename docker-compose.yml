@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: appdatabase
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: app.Dockerfile
+    image: app
+    command: python manage.py runserver 0.0.0.0:8020
+    ports:
+      - "8020:8020"
+    depends_on:
+      - db
+
+  bot:
+    image: app
+    command: python app/bots/runner.py
+    depends_on:
+      - db
+
+volumes:
+  db_data:

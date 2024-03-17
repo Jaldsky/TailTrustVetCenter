@@ -18,7 +18,7 @@ class Controller(ControllerBase):
 
     def exec(self) -> None:
         """Метод для запуска контроллера."""
-
+        if not BOT_TOKEN:
+            raise Exception('No token specified')
         bot = TailTrustBot(api_token=BOT_TOKEN)
         bot.exec()
-
